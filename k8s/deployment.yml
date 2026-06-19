@@ -1,0 +1,90 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: devops-portfolio-api
+  labels:
+    app: devops-portfolio-api
+    tier: backend
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: devops-portfolio-api
+  template:
+    metadata:
+      labels:
+        app: devops-portfolio-api
+        tier: backend
+        version: v1
+    spec:
+      containers:
+      - name: api
+        image: devops-portfolio-api:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 3000
+          name: http
+          protocol: TCP
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: PORT
+          value: "3000"
+        - name: LOG_LEVEL
+          value: "info"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /api/health/live
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /api/health/ready
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: devops-portfolio-api
+  labels:
+    app: devops-portfolio-api
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 3000
+    protocol: TCP
+    name: http
+  selector:
+    app: devops-portfolio-api
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: devops-portfolio-api-lb
+  labels:
+    app: devops-portfolio-api
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+    targetPort: 3000
+    protocol: TCP
+    name: http
+  selector:
+    app: devops-portfolio-api
